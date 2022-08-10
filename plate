@@ -1,0 +1,98 @@
+#!/bin/bash
+
+PROJECTNAMEMARKER="_PROJECTNAME_"
+DESCRIPTIONMARKER="_DESCRIPTION_"
+TEMPLATEDIR=~/.config/plate/templates
+
+version()
+{
+    echo "${BASH_SOURCE[0]} 0.1.0"
+}
+
+help()
+{
+    version
+    echo ""
+    echo "A template management solution"
+    echo ""
+    echo "USAGE:"
+    echo -e "\t${BASH_SOURCE[0]} [OPTIONS] TEMPLATE OUTPUTDIR"
+    echo ""
+    echo "OPTIONS:"
+    echo -e "\t-l\tList available templates"
+    echo -e "\t-p\tSet project name"
+    echo -e "\t-d\tSet description text"
+    echo -e "\t-V\tShow version information"
+}
+
+list()
+{
+    # list the available template
+    if [ -d ${TEMPLATEDIR} ]; then
+        cd ${TEMPLATEDIR}
+        ls -d */ | cut -f1 -d'/'
+    else
+        echo "Template directory: ${TEMPLATEDIR} does not exist"
+    fi
+}
+
+while getopts "Vlp:d:" arg; do
+    case $arg in
+        v) 
+            version
+            exit
+            ;;
+        l)
+            list
+            exit
+            ;;
+        p) 
+            PROJECTNAME=$OPTARG
+            ;;
+        d) 
+            DESCRIPTION=$OPTARG
+            ;;
+        ?) 
+            help
+            exit
+            ;;
+
+    esac
+done
+
+TEMPLATENAME=${@:$OPTIND:1}
+OUTPUTDIR=${@:$OPTIND+1:1}
+
+if [ -z ${TEMPLATENAME} ] || [ -z ${OUTPUTDIR} ]; then
+    echo "Not enough args"
+    help
+    exit 1
+fi
+
+if [ -d ${OUTPUTDIR} ]; then
+    echo "Directory: ${OUTPUTDIR} already exists!"
+    exit 1
+fi
+
+TEMPLATE=${TEMPLATEDIR}/${TEMPLATENAME}
+if [ ! -d ${TEMPLATE} ]; then
+    echo "No such template"
+    exit 1
+fi
+
+if [ -z ${PROJECTNAME} ]; then
+    echo "Setting default Project Name"
+    PROJECTNAME="Project"
+fi
+if [ -z ${DESCRIPTION} ]; then
+    echo "Setting default description"
+    DESCRIPTION="Add description here"
+fi
+
+cp -r ${TEMPLATE} ${OUTPUTDIR}
+
+cd ${OUTPUTDIR}
+
+# substitute the markers with the given data
+find . -type f | xargs fgrep -l "${PROJECTNAMEMARKER}" | xargs sed -i "s/${PROJECTNAMEMARKER}/${PROJECTNAME}/g" > /dev/null 2>&1
+find . -type f | xargs fgrep -l "${DESCRIPTIONMARKER}" | xargs sed -i "s/${DESCRIPTIONMARKER}/${DESCRIPTION}/g" > /dev/null 2>&1

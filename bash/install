@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cp ./sp /usr/local/bin/_PROJECTNAME_
+chmod 755 /usr/local/bin/_PROJECTNAME_
