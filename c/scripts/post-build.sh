@@ -1,4 +1,6 @@
 #!/bin/bash
 
-pwd
-cp ./compile_commands.json ..
+PROJECTDIR=$1
+BUILDDIR=$2
+
+cp ${BUILDDIR}/compile_commands.json ${PROJECTDIR}

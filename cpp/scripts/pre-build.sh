@@ -1,1 +1,4 @@
 #!/bin/bash
+
+PROJECTDIR=$1
+BUILDDIR=$2

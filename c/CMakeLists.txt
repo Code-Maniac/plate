@@ -14,9 +14,9 @@ add_executable(_PROJECTNAME_ ${PROJECT_SOURCES})
 add_custom_command(
     TARGET _PROJECTNAME_
     PRE_BUILD
-    COMMAND ../scripts/pre-build.sh)
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/pre-build.sh ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 add_custom_command(
     TARGET _PROJECTNAME_
     POST_BUILD
-    COMMAND ../scripts/post-build.sh)
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/post-build.sh ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})

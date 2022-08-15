@@ -6,17 +6,16 @@ TEMPLATEDIR=~/.config/plate/templates
 
 version()
 {
-    echo "${BASH_SOURCE[0]} 0.1.0"
+    echo "$(basename ${BASH_SOURCE[0]}) 0.1.0"
 }
 
 help()
 {
     version
-    echo ""
     echo "A template management solution"
     echo ""
     echo "USAGE:"
-    echo -e "\t${BASH_SOURCE[0]} [OPTIONS] TEMPLATE OUTPUTDIR"
+    echo -e "\t$(basename ${BASH_SOURCE[0]}) [OPTIONS] TEMPLATE OUTPUTDIR"
     echo ""
     echo "OPTIONS:"
     echo -e "\t-l\tList available templates"

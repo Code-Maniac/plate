@@ -9,7 +9,7 @@ sudo ./install
 
 ## Usage
 ```bash
- ARGS
+_PROJECTNAME_ ARGS
 ```
 
 ## License
