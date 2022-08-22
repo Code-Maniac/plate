@@ -5,8 +5,17 @@ cp ./plate /usr/local/bin/plate
 chmod 755 /usr/local/bin/plate
 
 # copy the template projects to the config
-CONFIGDIR=/home/${SUDO_USER}/.config/plate/templates
+if [ ${SUDO_USER} != "" ]; then
+    CONFIGDIR=/home/${SUDO_USER}/.config/plate/templates
+else
+    CONFIGDIR=/home/${USER}/.config/plate/templates
+fi
+
+# remove existing config dir and remake
+rm -rf ${CONFIGDIR}
 mkdir -p ${CONFIGDIR}
 cp -r ./bash ${CONFIGDIR}/bash
 cp -r ./c ${CONFIGDIR}/c
 cp -r ./cpp ${CONFIGDIR}/cpp
+cp -r ./python-lib ${CONFIGDIR}/python-lib
+cp -r ./python-bin ${CONFIGDIR}/python-bin

@@ -2,7 +2,13 @@
 
 PROJECTNAMEMARKER="_PROJECTNAME_"
 DESCRIPTIONMARKER="_DESCRIPTION_"
+EMAILMARKER="_EMAIL_"
+AUTHORMARKER="_AUTHOR_"
+LICENSEMARKER="_LICENSE_"
+YEARMARKER="_YEAR_"
 TEMPLATEDIR=~/.config/plate/templates
+
+YEAR=$(date +"%Y")
 
 version()
 {
@@ -21,6 +27,9 @@ help()
     echo -e "\t-l\tList available templates"
     echo -e "\t-p\tSet project name"
     echo -e "\t-d\tSet description text"
+    echo -e "\t-e\tSet email text"
+    echo -e "\t-a\tSet author name"
+    echo -e "\t-L\tSet license"
     echo -e "\t-V\tShow version information"
 }
 
@@ -35,7 +44,7 @@ list()
     fi
 }
 
-while getopts "Vlp:d:" arg; do
+while getopts "Vlp:d:e:a:L:" arg; do
     case $arg in
         v) 
             version
@@ -45,17 +54,25 @@ while getopts "Vlp:d:" arg; do
             list
             exit
             ;;
-        p) 
+        p)
             PROJECTNAME=$OPTARG
             ;;
-        d) 
+        d)
             DESCRIPTION=$OPTARG
             ;;
-        ?) 
+        e)
+            EMAIL=$OPTARG
+            ;;
+        a)
+            AUTHOR=$OPTARG
+            ;;
+        l)
+            LICENSE=$OPTARG
+            ;;
+        ?)
             help
             exit
             ;;
-
     esac
 done
 
@@ -79,19 +96,43 @@ if [ ! -d ${TEMPLATE} ]; then
     exit 1
 fi
 
-if [ -z ${PROJECTNAME} ]; then
+if [ -z "${PROJECTNAME}" ]; then
     echo "Setting default Project Name"
-    PROJECTNAME="Project"
+    PROJECTNAME="project"
 fi
-if [ -z ${DESCRIPTION} ]; then
+if [ -z "${DESCRIPTION}" ]; then
     echo "Setting default description"
     DESCRIPTION="Add description here"
+fi
+if [ -z "${EMAIL}" ]; then
+    echo "Setting default email"
+    EMAIL="john.smith@gmail.com"
+fi
+if [ -z "${AUTHOR}" ]; then
+    echo "Setting default username"
+    AUTHOR="John Smith"
+fi
+if [ -z "${LICENSE}" ]; then
+    echo "Setting default license MIT"
+    LICENSE="MIT"
 fi
 
 cp -r ${TEMPLATE} ${OUTPUTDIR}
 
 cd ${OUTPUTDIR}
 
-# substitute the markers with the given data
+# substitute the markers in the project with the given data
 find . -type f | xargs fgrep -l "${PROJECTNAMEMARKER}" | xargs sed -i "s/${PROJECTNAMEMARKER}/${PROJECTNAME}/g" > /dev/null 2>&1
 find . -type f | xargs fgrep -l "${DESCRIPTIONMARKER}" | xargs sed -i "s/${DESCRIPTIONMARKER}/${DESCRIPTION}/g" > /dev/null 2>&1
+find . -type f | xargs fgrep -l "${EMAILMARKER}" | xargs sed -i "s/${EMAILMARKER}/${EMAIL}/g" > /dev/null 2>&1
+find . -type f | xargs fgrep -l "${AUTHORMARKER}" | xargs sed -i "s/${AUTHORMARKER}/${AUTHOR}/g" > /dev/null 2>&1
+find . -type f | xargs fgrep -l "${YEARMARKER}" | xargs sed -i "s/${YEARMARKER}/${YEAR}/g" > /dev/null 2>&1
+
+# in projects where there is the concept of "modules" we need to rename the
+# _PROJECTNAME_ directory to the project name
+MODULEDIR=$(find . -type d -name ${PROJECTNAMEMARKER})
+if [[ ${MODULEDIR} != "" ]]; then
+    cd $(dirname ${MODULEDIR})
+    mv $(basename ${MODULEDIR}) ${PROJECTNAME}
+fi
+
