@@ -11,6 +11,11 @@ else
     CONFIGDIR=/home/${USER}/.config/plate/templates
 fi
 
+CONFIGFILE=${CONFIGDIR}/plate.conf
+if [ ! -f ${CONFIGFILE} ]; then
+    cp ./plate.conf ${CONFIGFILE}
+fi
+
 # remove existing config dir and remake
 rm -rf ${CONFIGDIR}
 mkdir -p ${CONFIGDIR}
@@ -19,3 +24,4 @@ cp -r ./c ${CONFIGDIR}/c
 cp -r ./cpp ${CONFIGDIR}/cpp
 cp -r ./python-lib ${CONFIGDIR}/python-lib
 cp -r ./python-bin ${CONFIGDIR}/python-bin
+cp -r ./python-pygame ${CONFIGDIR}/python-pygame

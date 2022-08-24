@@ -7,14 +7,18 @@ AUTHORMARKER="_AUTHOR_"
 LICENSEMARKER="_LICENSE_"
 YEARMARKER="_YEAR_"
 TEMPLATEDIR=~/.config/plate/templates
+CONFIGFILE=~/.config/plate/plate.conf
+KEYNOTFOUND="Config key not found"
 
 YEAR=$(date +"%Y")
 
+# print the version
 version()
 {
     echo "$(basename ${BASH_SOURCE[0]}) 0.1.0"
 }
 
+# print the help
 help()
 {
     version
@@ -23,19 +27,60 @@ help()
     echo "USAGE:"
     echo -e "\t$(basename ${BASH_SOURCE[0]}) [OPTIONS] TEMPLATE OUTPUTDIR"
     echo ""
+    echo "ARGUMENTS:"
+    echo -e "\tTEMPLATE\t\tThe name of the template to use"
+    echo -e "\tOUTPUTDIR\t\tThe directory that the templated project will be created"
+    echo ""
     echo "OPTIONS:"
-    echo -e "\t-l\tList available templates"
-    echo -e "\t-p\tSet project name"
-    echo -e "\t-d\tSet description text"
-    echo -e "\t-e\tSet email text"
-    echo -e "\t-a\tSet author name"
-    echo -e "\t-L\tSet license"
-    echo -e "\t-V\tShow version information"
+    echo -e "\t-l\t\tList available templates"
+    echo -e "\t-p\t\tSet project name"
+    echo -e "\t-d\t\tSet description text"
+    echo -e "\t-e\t\tSet email text"
+    echo -e "\t-a\t\tSet author name"
+    echo -e "\t-L\t\tSet license"
+    echo -e "\t-V\t\tShow version information"
+    echo ""
+    echo SUBCOMMANDS:
+    echo -e "\tset-config\tSet config values"
+    echo -e "\tget-config\tGet config values"
 }
 
+# print the help for the set-config subcommand
+set_config_help()
+{
+    echo "SUBCOMMAND set-config"
+    echo ""
+    echo "USAGE:"
+    echo -e "\t$(basename ${BASH_SOURCE[0]}) set-config [OPTIONS]"
+    echo ""
+    echo "OPTIONS:"
+    echo -e "\t-p\t\tSet default project name"
+    echo -e "\t-d\t\tSet default description"
+    echo -e "\t-e\t\tSet default email"
+    echo -e "\t-a\t\tSet default author"
+    echo -e "\t-L\t\tSet default license"
+    echo -e "\t-t\t\tSet template directory"
+    echo -e "\t-h\t\tShow help"
+}
+
+# print the help for the get-config subcommand
+get_config_help()
+{
+    echo "SUBCOMMAND get-config"
+    echo ""
+    echo "USAGE:"
+    echo -e "\t$(basename ${BASH_SOURCE[0]}) get-config [KEY]"
+    echo ""
+    echo "ARGUMENTS:"
+    echo -e "\tKEY\t\tThe key of the value to show. If no key set then show whole config file"
+    echo ""
+    echo "OPTIONS:"
+    echo -e "\t-h\t\tShow help"
+}
+
+# list the available templates
 list()
 {
-    # list the available template
     if [ -d ${TEMPLATEDIR} ]; then
         cd ${TEMPLATEDIR}
         ls -d */ | cut -f1 -d'/'
@@ -44,95 +89,199 @@ list()
     fi
 }
 
-while getopts "Vlp:d:e:a:L:" arg; do
-    case $arg in
-        v) 
-            version
-            exit
-            ;;
-        l)
-            list
-            exit
-            ;;
-        p)
-            PROJECTNAME=$OPTARG
-            ;;
-        d)
-            DESCRIPTION=$OPTARG
-            ;;
-        e)
-            EMAIL=$OPTARG
-            ;;
-        a)
-            AUTHOR=$OPTARG
-            ;;
-        l)
-            LICENSE=$OPTARG
-            ;;
-        ?)
-            help
-            exit
-            ;;
-    esac
-done
+# get the value of the config value with the given key
+# $1 = KEY
+get_config_value()
+{
+    KEY=$1
+    OUTPUT=$(sed -nr "/^\[config\]/ { :l /^${KEY}[ ]*=/ { s/[^=]*=[ ]*//; p; q;}; n; b l;}" ${CONFIGFILE})
+    if [[ ${OUTPUT} != "" ]]; then
+        echo ${OUTPUT}
+    else
+        echo ${KEYNOTFOUND}
+    fi
+}
 
-TEMPLATENAME=${@:$OPTIND:1}
-OUTPUTDIR=${@:$OPTIND+1:1}
+# set the value of the config value with the given key
+# $1 = KEY
+# $2 = VALUE
+set_config_value()
+{
+    KEY=$1
+    VAL=$2
+    OLDVAL=$(get_config_value ${KEY})
 
-if [ -z ${TEMPLATENAME} ] || [ -z ${OUTPUTDIR} ]; then
-    echo "Not enough args"
-    help
-    exit 1
-fi
+    if [[ ${OLDVAL} != ${KEYNOTFOUND} ]]; then
+        ESCAPEDOLDVAL=$(printf '%s\n' "${OLDVAL}" | sed -e 's/[\/&]/\\&/g')
+        ESCAPEDVAL=$(printf '%s\n' "${VAL}" | sed -e 's/[\/&]/\\&/g')
+        sed -i "/^\[config\]$/,/^\[/ s/^${KEY} = ${ESCAPEDOLDVAL}/${KEY} = ${ESCAPEDVAL}/" ${CONFIGFILE}
+    else
+        # add the key value to the file
+        echo "${KEY} = ${VAL}" >> ${CONFIGFILE}
+    fi
+}
 
-if [ -d ${OUTPUTDIR} ]; then
-    echo "Directory: ${OUTPUTDIR} already exists!"
-    exit 1
-fi
+case $1 in
+    set-config)
+        SUBCOMMAND="set-config"
+        ;;
+    get-config)
+        SUBCOMMAND="get-config"
+        ;;
+esac
 
-TEMPLATE=${TEMPLATEDIR}/${TEMPLATENAME}
-if [ ! -d ${TEMPLATE} ]; then
-    echo "No such template"
-    exit 1
-fi
+if [[ ${SUBCOMMAND} == "set-config" ]]; then
+    COUNT=0
+    shift
+    while getopts "p:d:e:a:L:t:h" arg; do
+        case $arg in
+            p)
+                PROJECTNAME=$OPTARG
+                set_config_value "PROJECTNAME" "$OPTARG"
+                ((++COUNT))
+                ;;
+            d)
+                set_config_value "DESCRIPTION" "$OPTARG"
+                ((++COUNT))
+                ;;
+            e)
+                set_config_value "EMAIL" "$OPTARG"
+                ((++COUNT))
+                ;;
+            a)
+                set_config_value "AUTHOR" "$OPTARG"
+                ((++COUNT))
+                ;;
+            L)
+                set_config_value "LICENSE" "$OPTARG"
+                ((++COUNT))
+                ;;
+            t)
+                set_config_value "TEMPLATEDIR" "$OPTARG"
+                ((++COUNT))
+                ;;
+            h)
+                set_config_help
+                exit
+                ;;
+        esac
+    done
 
-if [ -z "${PROJECTNAME}" ]; then
-    echo "Setting default Project Name"
-    PROJECTNAME="project"
-fi
-if [ -z "${DESCRIPTION}" ]; then
-    echo "Setting default description"
-    DESCRIPTION="Add description here"
-fi
-if [ -z "${EMAIL}" ]; then
-    echo "Setting default email"
-    EMAIL="john.smith@gmail.com"
-fi
-if [ -z "${AUTHOR}" ]; then
-    echo "Setting default username"
-    AUTHOR="John Smith"
-fi
-if [ -z "${LICENSE}" ]; then
-    echo "Setting default license MIT"
-    LICENSE="MIT"
-fi
+    if [ ${COUNT} -eq 0 ]; then
+        set_config_help
+        exit 1
+    fi
+elif [[ ${SUBCOMMAND} == "get-config" ]]; then
+    # get the key for the config value
+    shift
+    while getopts ":h" arg; do
+        case $arg in
+            h)
+                get_config_help
+                exit
+                ;;
+        esac
+    done
 
-cp -r ${TEMPLATE} ${OUTPUTDIR}
+    KEY=${@:$OPTIND:2}
+    if [ -z ${KEY} ]; then
+        cat ${CONFIGFILE} # just catenate the config file
+    else
+        echo $(get_config_value ${KEY})
+    fi
+else
+    # no subcommand
+    while getopts "Vlp:d:e:a:L:" arg; do
+        case $arg in
+            v) 
+                version
+                exit
+                ;;
+            l)
+                list
+                exit
+                ;;
+            p)
+                PROJECTNAME=$OPTARG
+                ;;
+            d)
+                DESCRIPTION=$OPTARG
+                ;;
+            e)
+                EMAIL=$OPTARG
+                ;;
+            a)
+                echo $OPTARG
+                AUTHOR=$OPTARG
+                ;;
+            l)
+                LICENSE=$OPTARG
+                ;;
+            ?)
+                help
+                exit
+                ;;
+        esac
+    done
 
-cd ${OUTPUTDIR}
+    TEMPLATENAME=${@:$OPTIND:1}
+    OUTPUTDIR=${@:$OPTIND+1:1}
 
-# substitute the markers in the project with the given data
-find . -type f | xargs fgrep -l "${PROJECTNAMEMARKER}" | xargs sed -i "s/${PROJECTNAMEMARKER}/${PROJECTNAME}/g" > /dev/null 2>&1
-find . -type f | xargs fgrep -l "${DESCRIPTIONMARKER}" | xargs sed -i "s/${DESCRIPTIONMARKER}/${DESCRIPTION}/g" > /dev/null 2>&1
-find . -type f | xargs fgrep -l "${EMAILMARKER}" | xargs sed -i "s/${EMAILMARKER}/${EMAIL}/g" > /dev/null 2>&1
-find . -type f | xargs fgrep -l "${AUTHORMARKER}" | xargs sed -i "s/${AUTHORMARKER}/${AUTHOR}/g" > /dev/null 2>&1
-find . -type f | xargs fgrep -l "${YEARMARKER}" | xargs sed -i "s/${YEARMARKER}/${YEAR}/g" > /dev/null 2>&1
+    if [ -z ${TEMPLATENAME} ] || [ -z ${OUTPUTDIR} ]; then
+        echo "Not enough args"
+        help
+        exit 1
+    fi
 
-# in projects where there is the concept of "modules" we need to rename the
-# _PROJECTNAME_ directory to the project name
-MODULEDIR=$(find . -type d -name ${PROJECTNAMEMARKER})
-if [[ ${MODULEDIR} != "" ]]; then
-    cd $(dirname ${MODULEDIR})
-    mv $(basename ${MODULEDIR}) ${PROJECTNAME}
+    if [ -d ${OUTPUTDIR} ]; then
+        echo "Directory: ${OUTPUTDIR} already exists!"
+        exit 1
+    fi
+
+    TEMPLATE=${TEMPLATEDIR}/${TEMPLATENAME}
+    if [ ! -d ${TEMPLATE} ]; then
+        echo "No such template"
+        exit 1
+    fi
+
+    if [ -z "${PROJECTNAME}" ]; then
+        PROJECTNAME=$(get_config_value "PROJECTNAME")
+        echo "Setting default project name: ${PROJECTNAME}"
+    fi
+    if [ -z "${DESCRIPTION}" ]; then
+        DESCRIPTION=$(get_config_value "DESCRIPTION")
+        echo "Setting default description: ${DESCRIPTION}"
+    fi
+    if [ -z "${EMAIL}" ]; then
+        EMAIL=$(get_config_value "EMAIL")
+        echo "Setting default email: ${EMAIL}"
+    fi
+    if [ -z "${AUTHOR}" ]; then
+        AUTHOR=$(get_config_value "AUTHOR")
+        echo "Setting default username: ${AUTHOR}"
+    fi
+    if [ -z "${LICENSE}" ]; then
+        LICENSE=$(get_config_value "LICENSE")
+        echo "Setting default license: ${LICENSE}"
+    fi
+
+    cp -r ${TEMPLATE} ${OUTPUTDIR}
+
+    cd ${OUTPUTDIR}
+
+    # substitute the markers in the project with the given data
+    find . -type f | xargs fgrep -l "${PROJECTNAMEMARKER}" | xargs sed -i "s/${PROJECTNAMEMARKER}/${PROJECTNAME}/g" > /dev/null 2>&1
+    find . -type f | xargs fgrep -l "${DESCRIPTIONMARKER}" | xargs sed -i "s/${DESCRIPTIONMARKER}/${DESCRIPTION}/g" > /dev/null 2>&1
+    find . -type f | xargs fgrep -l "${EMAILMARKER}" | xargs sed -i "s/${EMAILMARKER}/${EMAIL}/g" > /dev/null 2>&1
+    find . -type f | xargs fgrep -l "${AUTHORMARKER}" | xargs sed -i "s/${AUTHORMARKER}/${AUTHOR}/g" > /dev/null 2>&1
+    find . -type f | xargs fgrep -l "${YEARMARKER}" | xargs sed -i "s/${YEARMARKER}/${YEAR}/g" > /dev/null 2>&1
+
+    # in projects where there is the concept of "modules" we need to rename the
+    # _PROJECTNAME_ directory to the project name
+    MODULEDIR=$(find . -type d -name ${PROJECTNAMEMARKER})
+    if [[ ${MODULEDIR} != "" ]]; then
+        cd $(dirname ${MODULEDIR})
+        mv $(basename ${MODULEDIR}) ${PROJECTNAME}
+    fi
 fi
 
